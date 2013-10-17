@@ -28,6 +28,7 @@
 package me.code4fun.roboq;
 
 
+import android.util.Log;
 import me.code4fun.roboq.multipart.MultipartEntity;
 import me.code4fun.roboq.multipart.content.ByteArrayBody;
 import me.code4fun.roboq.multipart.content.FileBody;
@@ -121,6 +122,8 @@ import java.util.concurrent.Executor;
  */
 public class Request extends RequestBase<Request> {
 
+    public static final String LOG_TAG = "Roboq.Request";
+
     public static final int GET = 1;
     public static final int POST = 2;
     public static final int PUT = 3;
@@ -174,6 +177,10 @@ public class Request extends RequestBase<Request> {
     public Request setMethod(int method) {
         this.method = method;
         return this;
+    }
+
+    public String getMethodAsText() {
+        return getMethodAsText(this.method);
     }
 
     public Object getTag() {
@@ -368,7 +375,7 @@ public class Request extends RequestBase<Request> {
     }
 
     protected String getFileContentType(File f) {
-        // TODO: ...
+        // TODO: 获取常用文件扩展名的content-type
         return DEFAULT_BINARY_CONTENT_TYPE;
     }
 
@@ -564,6 +571,25 @@ public class Request extends RequestBase<Request> {
         }
     }
 
+    private static String getMethodAsText(int method) {
+        switch (method) {
+            case GET: return "GET";
+            case POST: return "POST";
+            case PUT: return "PUT";
+            case DELETE: return "DELETE";
+            case OPTIONS: return "OPTIONS";
+            case TRACE: return "TRACE";
+            case HEAD: return "HEAD";
+        }
+        return "";
+    }
+
+    private static String formatRequest(int method, String url, Options opts) {
+        StringBuilder buff = new StringBuilder();
+        buff.append("HTTP ").append(getMethodAsText(method)).append(" ").append(url);
+        // TODO: 加入显示opts
+        return buff.toString();
+    }
 
     public Response execute() {
         int method = mergeMethod();
@@ -573,6 +599,9 @@ public class Request extends RequestBase<Request> {
         HttpClient httpClient = createHttpClient(method, url, opts);
         HttpUriRequest httpReq = createHttpRequest(method, url, opts);
         try {
+            if (Log.isLoggable(LOG_TAG, Log.DEBUG)) {
+                Log.d(LOG_TAG, formatRequest(method, url, opts));
+            }
             HttpResponse httpResp = httpClient.execute(httpReq);
             return createResponse(httpResp);
         } catch (IOException e) {
