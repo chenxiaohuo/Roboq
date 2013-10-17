@@ -6,7 +6,7 @@
 /_/ |_|  \____/ /_.___/ \____/ \__, /
                                  /_/
 
-                简单易用的Android HTTP Client
+                简单易用的Android HTTP Client！
 
 ```
 
