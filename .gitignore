@@ -1,5 +1,5 @@
 *.iml
-.idea
-.svn
-.cvs
+.idea/
+.svn/
+.cvs/
 out/
