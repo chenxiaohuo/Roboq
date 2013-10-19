@@ -42,17 +42,21 @@ public class InputStreamBody extends AbstractContentBody {
     private final InputStream in;
     private final String filename;
 
-    public InputStreamBody(final InputStream in, final String mimeType, final String filename) {
+    // 修正InputStreamBody.getContentLength()总返回-1，导致服务器端无法正确解析multipart的错误
+    private final long length;
+
+    public InputStreamBody(final InputStream in, final String mimeType, final String filename, long length) {
         super(mimeType);
         if (in == null) {
             throw new IllegalArgumentException("Input stream may not be null");
         }
         this.in = in;
         this.filename = filename;
+        this.length = length;
     }
 
-    public InputStreamBody(final InputStream in, final String filename) {
-        this(in, "application/octet-stream", filename);
+    public InputStreamBody(final InputStream in, final String filename, long length) {
+        this(in, "application/octet-stream", filename, length);
     }
 
     public InputStream getInputStream() {
@@ -84,7 +88,7 @@ public class InputStreamBody extends AbstractContentBody {
     }
 
     public long getContentLength() {
-        return -1;
+        return length;
     }
 
     public String getFilename() {

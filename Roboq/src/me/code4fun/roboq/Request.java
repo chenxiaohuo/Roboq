@@ -29,6 +29,7 @@ package me.code4fun.roboq;
 
 
 import android.util.Log;
+import me.code4fun.roboq.multipart.HttpMultipartMode;
 import me.code4fun.roboq.multipart.MultipartEntity;
 import me.code4fun.roboq.multipart.content.ByteArrayBody;
 import me.code4fun.roboq.multipart.content.FileBody;
@@ -64,59 +65,7 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 
 /**
- * Request描述一个HTTP请求，它的要素包含:<br/>
- * <table border="1">
- * <thead>
- * <tr>
- * <th>名称</th>
- * <th>说明</th>
- * <th>选项后缀</th>
- * </tr>
- * </thead>
- * <tbody>
- * <tr>
- * <td>Method</td
- * <td>HTTP的动词，例如GET,POST等</td>
- * <td>N/A</td>
- * </tr>
- * <tr>
- * <td>URL</td>
- * <td>HTTP请求的URL</td>
- * <td>N/A</td>
- * </tr>
- * <tr>
- * <td>PathVar</td>
- * <td>URL中的占位符号，例如URL "http://..../${id}/posts"中的"id"就是一个PathVar</td>
- * <td>$</td>
- * </tr>
- * <tr>
- * <td>Param</td>
- * <td>HTTP请求中附加在URL后的参数</td>
- * <td>=</td>
- * </tr>
- * <tr>
- * <td>Header</td>
- * <td>HTTP的头项目</td>
- * <td>:</td>
- * </tr>
- * <tr>
- * <td>Field</td>
- * <td>在POST请求中参数</td>
- * <td>@</td>
- * </tr>
- * </tbody>
- * </table>
- * 例如:
- * <pre>
- * Request req = new Request(
- *      POST,                                   // Method
- *      "http://.../${id}/posts",               // URL
- *      "User-Agent :", "RoboqClient",          // Header "User-Agent: RoboqClient"
- *      "param1     =", 3,                      // Param  "&param1=3"
- *      "id         $", "user@email.com",       // PathVar 替换URL中的"${id}"为"user@email.com",
- *      "file1      @", new File("/file/path")  // 上传文件使用"file1"作为Field名称
- * );
- * </pre>
+ * Request
  *
  * @since 0.1
  */
@@ -359,11 +308,11 @@ public class Request extends RequestBase<Request> {
             });
         }
 
-        // connection timeout
+        // 连接超时
         Integer connTimeout1 = selectValue(connectionTimeout, prepared != null ? prepared.connectionTimeout : null, 20000);
         httpClient.getParams().setParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, connTimeout1);
 
-        // so timeout
+        // Socket超时
         Integer soTimeout1 = selectValue(soTimeout, prepared != null ? prepared.soTimeout : null, 0);
         httpClient.getParams().setParameter(CoreConnectionPNames.SO_TIMEOUT, soTimeout1);
 
@@ -380,78 +329,54 @@ public class Request extends RequestBase<Request> {
     }
 
     protected HttpEntity createRequestBody(int method, String url, Options opts) {
-        BodyOutputDecorator bod = getBodyOutputDecorator();
         Object bodyObj = opts.getBody();
         if (bodyObj != null) {
-            return createBody(bodyObj, bod);
+            return createBody(bodyObj);
         } else {
-            return createMultipartBody(opts.getFields(), bod);
+            return createFieldsBody(opts.getFields());
         }
     }
 
-    protected static abstract class BodyOutputDecorator {
-        public Object before() {
-            return null;
-        }
-
-        public void after(HttpEntity body, Object concomitant) {
-        }
-
-        public abstract OutputStream decorate(OutputStream out, Object concomitant);
+    protected OutputStream decorateBodyOutput(OutputStream out) {
+        return out;
     }
 
-    protected BodyOutputDecorator getBodyOutputDecorator() {
-        return null;
-    }
+    private HttpEntity createBody(Object o) {
+        Object o1 = o instanceof Body ? ((Body) o).content : o;
+        String c1 = o instanceof Body ? ((Body) o).contentType : null;
 
-    private static OutputStream decorateOutput(BodyOutputDecorator bod, OutputStream out, Object concomitant) {
-        return bod != null ? bod.decorate(out, concomitant) : out;
-    }
-
-    private HttpEntity createBody(Object o, final BodyOutputDecorator bod) {
-        Object obj1 = Value.getLength(o);
-        String ct1 = Value.getContentType(o);
-
-        final Object concomitant = bod != null ? bod.before() : null;
-        if (obj1 instanceof byte[]) {
-            ByteArrayEntity entity = new ByteArrayEntity((byte[]) obj1) {
+        if (o1 instanceof byte[]) {
+            ByteArrayEntity entity = new ByteArrayEntity((byte[]) o1) {
                 @Override
                 public void writeTo(OutputStream outstream) throws IOException {
-                    super.writeTo(decorateOutput(bod, outstream, concomitant));
+                    super.writeTo(decorateBodyOutput(outstream));
                 }
             };
-            entity.setContentType(ct1 != null ? ct1 : DEFAULT_BINARY_CONTENT_TYPE);
-            if (bod != null) {
-                bod.after(entity, concomitant);
-            }
+            entity.setContentType(c1 != null ? c1 : DEFAULT_BINARY_CONTENT_TYPE);
             return entity;
-        } else if (obj1 instanceof InputStream) {
-            long len = Value.getLength(o, -1);
-            InputStreamEntity entity = new InputStreamEntity((InputStream) obj1, len) {
+        } else if (o1 instanceof InputStream) {
+            Long len = o instanceof Body ? ((Body) o).length : null;
+            if (len == null)
+                throw new RoboqException("Missing length in body for upload InputStream");
+
+            InputStreamEntity entity = new InputStreamEntity((InputStream) o1, len) {
                 @Override
                 public void writeTo(OutputStream outstream) throws IOException {
-                    super.writeTo(decorateOutput(bod, outstream, concomitant));
+                    super.writeTo(decorateBodyOutput(outstream));
                 }
             };
-            entity.setContentType(ct1 != null ? ct1 : DEFAULT_BINARY_CONTENT_TYPE);
-            if (bod != null) {
-                bod.after(entity, concomitant);
-            }
+            entity.setContentType(c1 != null ? c1 : DEFAULT_BINARY_CONTENT_TYPE);
             return entity;
-        } else if (obj1 instanceof File) {
-            File f = (File) obj1;
-            FileEntity entity = new FileEntity(f, ct1 != null ? ct1 : getFileContentType(f)) {
+        } else if (o1 instanceof File) {
+            File f = (File) o1;
+            return new FileEntity(f, c1 != null ? c1 : getFileContentType(f)) {
                 @Override
                 public void writeTo(OutputStream outstream) throws IOException {
-                    super.writeTo(decorateOutput(bod, outstream, concomitant));
+                    super.writeTo(decorateBodyOutput(outstream));
                 }
             };
-            if (bod != null) {
-                bod.after(entity, concomitant);
-            }
-            return entity;
         } else {
-            String s = o2s(obj1, "");
+            String s = o2s(o1, "");
             String encoding = selectValue(fieldsEncoding,
                     prepared != null ? prepared.fieldsEncoding : null, "UTF-8");
             try {
@@ -459,13 +384,10 @@ public class Request extends RequestBase<Request> {
                 entity = new StringEntity(s, encoding) {
                     @Override
                     public void writeTo(OutputStream outstream) throws IOException {
-                        super.writeTo(decorateOutput(bod, outstream, concomitant));
+                        super.writeTo(decorateBodyOutput(outstream));
                     }
                 };
-                entity.setContentType(ct1 != null ? ct1 : DEFAULT_TEXT_CONTENT_TYPE);
-                if (bod != null) {
-                    bod.after(entity, concomitant);
-                }
+                entity.setContentType(c1 != null ? c1 : DEFAULT_TEXT_CONTENT_TYPE);
                 return entity;
             } catch (UnsupportedEncodingException e) {
                 throw new RoboqException("Illegal encoding for request body", e);
@@ -477,94 +399,91 @@ public class Request extends RequestBase<Request> {
         return obj instanceof byte[] || obj instanceof InputStream || obj instanceof File;
     }
 
-    private HttpEntity createMultipartBody(Map<String, Object> fields, final BodyOutputDecorator bod) {
+    private HttpEntity createFieldsBody(Map<String, Object> fields) {
         // multipart post?
-        boolean multipart1 = selectValue(multipart, prepared != null ? prepared.multipart : null, false);
-        for (Object obj : fields.values()) {
-            if (isBytesEquivalent(Value.getLength(obj))) {
-                multipart1 = true;
-                break;
+        Boolean multipart1 = selectValue(multipart, prepared != null ? prepared.multipart : null, null);
+        if (multipart1 == null) {
+            // auto
+            for (Object o : fields.values()) {
+                if (isBytesEquivalent(o instanceof Body ? ((Body) o).content : o)) {
+                    multipart1 = true;
+                    break;
+                }
+            }
+            if (multipart1 == null)
+                multipart1 = false;
+        } else if (multipart1 != null && !multipart1) {
+            for (Object o : fields.values()) {
+                if (isBytesEquivalent(o instanceof Body ? ((Body) o).content : o))
+                    throw new RoboqException("URLEncodedForm not support the type (byte[], InputStream, File)");
             }
         }
 
-        final Object concomitant = bod != null ? bod.before() : null;
         String encoding = selectValue(fieldsEncoding, prepared != null ? prepared.fieldsEncoding : null, "UTF-8");
         try {
             if (multipart1) {
-
-                MultipartEntity entity = new MultipartEntity();
+                MultipartEntity entity = new MultipartEntity(HttpMultipartMode.STRICT) {
+                    @Override
+                    public void writeTo(OutputStream outstream) throws IOException {
+                        super.writeTo(decorateBodyOutput(outstream));
+                    }
+                };
                 for (Map.Entry<String, Object> entry : fields.entrySet()) {
                     String field = entry.getKey();
-                    Object obj1 = Value.getLength(entry.getValue());
-                    String ct1 = Value.getContentType(entry.getValue());
-                    String fn1 = Value.getFilename(entry.getValue());
-                    if (isBytesEquivalent(obj1)) {
-                        if (obj1 instanceof byte[]) {
-                            ByteArrayBody cb = new ByteArrayBody((byte[]) obj1,
-                                    ct1 != null ? ct1 : DEFAULT_BINARY_CONTENT_TYPE,
-                                    fn1 != null ? fn1 : "") {
-                                @Override
-                                public void writeTo(OutputStream out) throws IOException {
-                                    super.writeTo(decorateOutput(bod, out, concomitant));
-                                }
-                            };
+                    Object o = entry.getValue();
+                    Object o1 = o instanceof Body ? ((Body) o).content : o;
+                    String c1 = o instanceof Body ? ((Body) o).contentType : null;
+                    String f1 = o instanceof Body ? ((Body) o).filename : null;
+                    if (isBytesEquivalent(o1)) {
+                        if (o1 instanceof byte[]) {
+                            ByteArrayBody cb = new ByteArrayBody((byte[]) o1,
+                                    c1 != null ? c1 : DEFAULT_BINARY_CONTENT_TYPE,
+                                    f1 != null ? f1 : "");
                             entity.addPart(field, cb);
-                        } else if (obj1 instanceof InputStream) {
-                            InputStreamBody cb = new InputStreamBody((InputStream) obj1,
-                                    ct1 != null ? ct1 : DEFAULT_BINARY_CONTENT_TYPE,
-                                    fn1 != null ? fn1 : "") {
-                                @Override
-                                public void writeTo(OutputStream out) throws IOException {
-                                    super.writeTo(decorateOutput(bod, out, concomitant));
-                                }
-                            };
+                        } else if (o1 instanceof InputStream) {
+                            Long len = o instanceof Body ? ((Body) o).length : null;
+                            if (len == null)
+                                throw new RoboqException("Missing length in body for upload InputStream");
+                            InputStreamBody cb = new InputStreamBody((InputStream) o1,
+                                    c1 != null ? c1 : DEFAULT_BINARY_CONTENT_TYPE,
+                                    f1 != null ? f1 : "",
+                                    len);
                             entity.addPart(field, cb);
-                        } else if (obj1 instanceof File) {
-                            File f = (File) obj1;
-                            FileBody cb = new FileBody(f, fn1 != null ? fn1 : null,
-                                    ct1 != null ? ct1 : getFileContentType(f), encoding) {
-                                @Override
-                                public void writeTo(OutputStream out) throws IOException {
-                                    super.writeTo(decorateOutput(bod, out, concomitant));
-                                }
-                            };
+                        } else if (o1 instanceof File) {
+                            File f = (File) o1;
+                            FileBody cb = new FileBody(f, f1 != null ? f1 : null,
+                                    c1 != null ? c1 : getFileContentType(f), encoding);
                             entity.addPart(field, cb);
                         } else {
                             throw new RoboqException("Here is unreached");
                         }
                     } else {
-                        String s = o2s(obj1, "");
-                        StringBody cb = new StringBody(s, ct1 != null ? ct1 : DEFAULT_TEXT_CONTENT_TYPE,
+                        String s = o2s(o1, "");
+                        StringBody cb = new StringBody(s, c1 != null ? c1 : DEFAULT_TEXT_CONTENT_TYPE,
                                 Charset.forName(encoding)) {
                             @Override
                             public void writeTo(OutputStream out) throws IOException {
-                                super.writeTo(decorateOutput(bod, out, concomitant));
+                                super.writeTo(decorateBodyOutput(out));
                             }
                         };
                         entity.addPart(field, cb);
                     }
                 }
-                if (bod != null) {
-                    bod.after(entity, concomitant);
-                }
                 return entity;
             } else {
                 ArrayList<NameValuePair> nvl = new ArrayList<NameValuePair>();
                 for (Map.Entry<String, Object> entry : fields.entrySet()) {
-                    Object obj1 = Value.getLength(entry.getValue());
-                    nvl.add(new BasicNameValuePair(entry.getKey(), o2s(obj1, "")));
+                    Object o = entry.getValue();
+                    Object o1 = o instanceof Body ? ((Body) o).content : o;
+                    nvl.add(new BasicNameValuePair(entry.getKey(), o2s(o1, "")));
                 }
 
-                UrlEncodedFormEntity entity = new UrlEncodedFormEntity(nvl, encoding) {
+                return new UrlEncodedFormEntity(nvl, encoding) {
                     @Override
                     public void writeTo(OutputStream outstream) throws IOException {
-                        super.writeTo(decorateOutput(bod, outstream, concomitant));
+                        super.writeTo(decorateBodyOutput(outstream));
                     }
                 };
-                if (bod != null) {
-                    bod.after(entity, concomitant);
-                }
-                return entity;
             }
         } catch (UnsupportedEncodingException e) {
             throw new RoboqException(e);
@@ -599,9 +518,7 @@ public class Request extends RequestBase<Request> {
         HttpClient httpClient = createHttpClient(method, url, opts);
         HttpUriRequest httpReq = createHttpRequest(method, url, opts);
         try {
-            if (Log.isLoggable(LOG_TAG, Log.DEBUG)) {
-                Log.d(LOG_TAG, formatRequest(method, url, opts));
-            }
+            Log.d(LOG_TAG, formatRequest(method, url, opts));
             HttpResponse httpResp = httpClient.execute(httpReq);
             return createResponse(httpResp);
         } catch (IOException e) {
@@ -766,41 +683,53 @@ public class Request extends RequestBase<Request> {
         }
     }
 
-    public static class Value {
-        public final Object object;
+    public static class Body {
+        public final Object content;
+        public final Long length;
         public final String contentType;
         public final String filename;
-        public long length;
 
-        public Value(Object object, String contentType) {
-            this(object, contentType, null);
-        }
-
-        public Value(Object object, String contentType, String filename) {
-            this.object = object;
+        Body(Object content, Long length, String contentType, String filename) {
+            this.content = content;
+            this.length = length;
             this.contentType = contentType;
             this.filename = filename;
         }
+    }
 
-        public Value withLength(long len) {
-            this.length = len;
-            return this;
-        }
+    public static Body bytesBody(byte[] bytes, final String filename) {
+        return bytesBody(bytes, null, filename);
+    }
 
-        public static Object getLength(Object obj) {
-            return obj instanceof Value ? ((Value) obj).object : obj;
-        }
+    public static Body bytesBody(byte[] bytes, String contentType, String filename) {
+        return new Body(bytes, (long) bytes.length, contentType, filename);
+    }
 
-        public static String getContentType(Object obj) {
-            return obj instanceof Value ? ((Value) obj).contentType : null;
-        }
+    public static Body contentBody(InputStream content, long length) {
+        return contentBody(content, length, null, null);
+    }
 
-        public static String getFilename(Object obj) {
-            return obj instanceof Value ? ((Value) obj).filename : null;
-        }
+    public static Body contentBody(InputStream content, long length, String filename) {
+        return contentBody(content, length, null, filename);
+    }
 
-        public static long getLength(Object obj, long def) {
-            return obj instanceof Value ? ((Value) obj).length : def;
-        }
+    public static Body contentBody(InputStream content, long length, String contentType, String filename) {
+        return new Body(content, length, contentType, filename);
+    }
+
+    public static Body fileBody(File file) {
+        return fileBody(file, null, null);
+    }
+
+    public static Body fileBody(File file, String filename) {
+        return fileBody(file, null, filename);
+    }
+
+    public static Body fileBody(File file, String contentType, String filename) {
+        return new Body(file, null, contentType, filename);
+    }
+
+    public static Body textBody(String text, String contentType) {
+        return new Body(text, null, contentType, null);
     }
 }

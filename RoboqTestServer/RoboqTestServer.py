@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify, redirect, url_for
 import json
 
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 app.debug = True
 
 
@@ -48,16 +48,51 @@ def test_post_body():
 
 @app.route('/test_multipart_post', methods=['POST'])
 def test_multipart_post():
-    file1 = request.files['file']
-    text = request.form['text']
+    file1 = request.files['bytes']
+    file2 = request.files['is']
+    file3 = request.files['file']
+    text = request.form['tf']
     return jsonify({
-        'file': {
+        'bytes': {
             'filename': file1.filename,
             'mimetype': file1.mimetype,
             'content-length': file1.content_length,
         },
-        'text': text
+        'is': {
+            'filename': file2.filename,
+            'mimetype': file2.mimetype,
+            'content-length': file2.content_length,
+        },
+        'file': {
+            'filename': file3.filename,
+            'mimetype': file3.mimetype,
+            'content-length': file3.content_length,
+        },
+        'tf': text
     })
+
+@app.route('/test_form_post', methods=['POST'])
+def test_form_post():
+    t1 = request.form['f1']
+    t2 = request.form['f2']
+    return jsonify({'f1':t1, 'f2':t2})
+
+@app.route('/test_body_post', methods=['POST'])
+def test_body_post():
+    btype = request.args.get('type', 'text')
+    if btype == 'text':
+        return jsonify({
+            'content': request.data,
+            'mimetype': request.mimetype,
+            'content-length': request.content_length})
+    elif btype in ['bytes', 'is', 'file']:
+        return jsonify({
+            'content': request.data,
+            'mimetype': request.mimetype,
+            'content-length': request.content_length})
+    else:
+        return jsonify({})
+
 
 
 @app.route('/test_redirect')

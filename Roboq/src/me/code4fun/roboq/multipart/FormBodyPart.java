@@ -58,6 +58,9 @@ public class FormBodyPart {
         generateContentDisp(body);
         generateContentType(body);
         generateTransferEncoding(body);
+
+        // 修复bug，加入Content-Type
+        generateContentLength(body);
     }
 
     public String getName() {
@@ -104,6 +107,10 @@ public class FormBodyPart {
 
     protected void generateTransferEncoding(final ContentBody body) {
         addField(MIME.CONTENT_TRANSFER_ENC, body.getTransferEncoding()); // TE cannot be null
+    }
+
+    protected void generateContentLength(final ContentBody body) {
+        addField("Content-Length", Long.toString(body.getContentLength()));
     }
 
 }

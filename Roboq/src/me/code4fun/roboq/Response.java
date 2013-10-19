@@ -80,6 +80,10 @@ public class Response {
         return headers;
     }
 
+    public String header(String name) {
+        return header(name, null);
+    }
+
     public String header(String name, String def) {
         Header hs = httpResponse.getFirstHeader(name);
         return hs != null ? hs.getValue() : def;

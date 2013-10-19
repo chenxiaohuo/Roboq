@@ -7,7 +7,9 @@ import me.code4fun.roboq.Response;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import static me.code4fun.roboq.Request.GET;
+import java.io.*;
+
+import static me.code4fun.roboq.Request.*;
 
 public class RoboqTest extends InstrumentationTestCase {
 
@@ -77,14 +79,149 @@ public class RoboqTest extends InstrumentationTestCase {
         assertEquals("/test_options", "zzz", jo.opt("dynaopt1"));
     }
 
+
     public void testMultipartPost() throws Exception {
-//        Response resp = new Request(Request.POST, "http://192.168.1.107:23333/test_multipart_post")
-//                .setMultipart(true)
-//                .with("f1@", new Request.Value("HELLO WORLD!".getBytes("UTF-8"), "text/plain", "test.txt"))
-//                .with("f2@", "FIELD2")
-//                .execute();
-//        String text = resp.asText();
-//        assertEquals("Multipart post", text, "test.txt");
+        final String BYTES_FN = "file1.txt";
+        final String IS_FN = "file2.txt";
+        final String FILE_FN = "file3.txt";
+        final String TF = "textfield1";
+
+        byte[] bytes = "HELLO".getBytes("UTF-8");
+        InputStream is = new ByteArrayInputStream(bytes);
+        File file3 = getInstrumentation().getContext().getFileStreamPath(FILE_FN);
+        saveBytesToFile(file3, bytes);
+
+
+        Response resp = new Request(prepared, POST, "/test_multipart_post")
+                .with("bytes@", bytes)
+                .with("is@", contentBody(is, bytes.length, "text/plain", IS_FN))
+                .with("file@", file3)
+                .with("tf@", TF)
+                .execute();
+
+        JSONObject r = resp.asJsonObject();
+        JSONObject bytesObj = r.optJSONObject("bytes");
+        JSONObject isObj = r.optJSONObject("is");
+        JSONObject fileObj = r.optJSONObject("file");
+        String tf = r.optString("tf");
+
+        assertEquals("/test_multipart_post", bytesObj.optString("filename"), "");
+        assertEquals("/test_multipart_post", bytesObj.optString("mimetype"), "application/octet-stream");
+        assertEquals("/test_multipart_post", bytesObj.optLong("content-length"), bytes.length);
+
+        assertEquals("/test_multipart_post", isObj.optString("filename"), IS_FN);
+        assertEquals("/test_multipart_post", isObj.optString("mimetype"), "text/plain");
+        assertEquals("/test_multipart_post", isObj.optLong("content-length"), bytes.length);
+
+        assertEquals("/test_multipart_post", fileObj.optString("filename"), FILE_FN);
+        assertEquals("/test_multipart_post", fileObj.optString("mimetype"), "application/octet-stream");
+        assertEquals("/test_multipart_post", fileObj.optLong("content-length"), file3.length());
+
+        assertEquals("/test_multipart_post", tf, TF);
+    }
+
+    public void testFormPost() throws Exception {
+        Response resp = new Request(prepared, POST, "/test_form_post")
+                .setMultipart(false)
+                .with("f1@", "v1")
+                .with("f2@", "v2")
+                .execute();
+
+        JSONObject r = resp.asJsonObject();
+        assertEquals("/test_form_post", r.optString("f1"), "v1");
+        assertEquals("/test_form_post", r.optString("f2"), "v2");
+    }
+
+    public void testBodyPost() throws Exception {
+
+        final String TEXT = "hello, Roboq!";
+
+        Response resp;
+
+        resp = new Request(prepared, POST, "/test_body_post")
+                .with("@", textBody(TEXT, "text/ppp"))
+                .with("type=", "text")
+                .execute();
+
+        JSONObject r = resp.asJsonObject();
+        assertEquals("/test_body_post", "text/ppp", r.optString("mimetype"));
+        assertEquals("/test_body_post", TEXT.length(), r.optInt("content-length", 0));
+        assertEquals("/test_body_post", TEXT, r.optString("content"));
+
+
+        resp = new Request(prepared, POST, "/test_body_post")
+                .with("@", TEXT.getBytes("UTF-8"))
+                .with("type=", "bytes")
+                .execute();
+
+        r = resp.asJsonObject();
+        assertEquals("/test_body_post", "application/octet-stream", r.optString("mimetype"));
+        assertEquals("/test_body_post", TEXT.getBytes("UTF-8").length, r.optInt("content-length", 0));
+        assertEquals("/test_body_post", TEXT, r.optString("content"));
+
+
+        ByteArrayInputStream is = new ByteArrayInputStream(TEXT.getBytes("UTF-8"));
+        resp = new Request(prepared, POST, "/test_body_post")
+                .with("@", contentBody(is, is.available()))
+                .with("type=", "is")
+                .execute();
+
+        r = resp.asJsonObject();
+        assertEquals("/test_body_post", "application/octet-stream", r.optString("mimetype"));
+        assertEquals("/test_body_post", TEXT.getBytes("UTF-8").length, r.optInt("content-length", 0));
+        assertEquals("/test_body_post", TEXT, r.optString("content"));
+
+
+        File f = getInstrumentation().getContext().getFileStreamPath("body_file.txt");
+        saveBytesToFile(f, TEXT.getBytes("UTF-8"));
+
+        resp = new Request(prepared, POST, "/test_body_post")
+                .with("@", f)
+                .with("type=", "file")
+                .execute();
+
+        r = resp.asJsonObject();
+        assertEquals("/test_body_post", "application/octet-stream", r.optString("mimetype"));
+        assertEquals("/test_body_post", TEXT.getBytes("UTF-8").length, r.optInt("content-length", 0));
+        assertEquals("/test_body_post", TEXT, r.optString("content"));
 
     }
+
+    public void testRedirect() throws Exception {
+        Response resp = new Request(prepared, GET, "/test_redirect")
+                .execute();
+
+        assertEquals("/test_redirect", "hello", resp.asText());
+
+        resp = new Request(prepared, GET, "/test_redirect")
+                .setRedirect(false)
+                .execute();
+        assertEquals("/test_redirect", 302, resp.statusCode());
+        assertTrue("/test_redirect", resp.header("Location", "").endsWith("/test_plain_text"));
+    }
+
+    public void testHTTPS() throws Exception {
+        Response resp = new Request(GET, "https://github.com/gaorx/Roboq")
+                .execute();
+
+        String text = resp.asText();
+        assertEquals("testHTTPS", 200, resp.statusCode());
+        assertTrue("testHTTPS", text.length() > 0);
+    }
+
+    public void testDownload() throws Exception {
+        File f = getInstrumentation().getContext().getFileStreamPath("download1");
+        new Request(prepared, GET, "/static/kk.png")
+                .execute().writeFile(f);
+
+        assertEquals("testDownload", 84688L, f.length());
+    }
+
+    private static void saveBytesToFile(File file, byte[] bytes) throws IOException {
+        FileOutputStream out = new FileOutputStream(file);
+        out.write(bytes);
+        out.close();
+    }
+
+
 }
