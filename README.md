@@ -203,7 +203,7 @@ new Request(POST, "http://..")
 
 ## 动态选项
 
-有时，有些选项是无法直接指定值，因为它们依赖于其他选项的值，例如某些API调用时候的`sign`等选项，它的值以来与所有其他选项的名称或值，在Roboq中可以使用动态选项的功能进行处理。动态选项需要继承自`Request.Modifier`类，例如：
+有时，有些选项是无法直接指定值，因为它们依赖于其他选项的值，例如某些API调用时候的`sign`等选项，它的值依赖其他选项的名称或值，在Roboq中可以使用动态选项的功能进行处理。动态选项需要继承自`Request.Modifier`类，例如：
 
 ```
 new Request(GET, "http://api.yourhost.com/call/api/name")
