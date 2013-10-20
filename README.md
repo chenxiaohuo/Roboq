@@ -1,4 +1,4 @@
-# Roboq: 简单易用的Android HTTP 客户端工具包!
+# Roboq: 简单易用的Android HTTP 客户端工具包！
 
 ![Roboq.png](https://raw.github.com/gaorx/Roboq/master/Roboq.png)
 
@@ -85,7 +85,7 @@ new Request(int method, String url)
 
 ## HTTP方法
 
-HTTP的动词定义在Request类中，分别为`GET`,`POST`,`PUT`,`DELETE`,`HEAD`,`TRACE`,`OPTIONS`
+HTTP的动词定义在`Request`类中，分别为`GET`,`POST`,`PUT`,`DELETE`,`HEAD`,`TRACE`,`OPTIONS`。
 
 
 ## 请求URL
@@ -144,7 +144,7 @@ new Request(GET, "http://www.baidu.com")
 
 ## 设置上传数据
 
-在调用HTTP REST API时，需要使用PUT或者POST来修改数据，而数据经常会放置在JSON格式的请求体(Request body)中，下面的例子：
+在调用HTTP REST API时，需要使用PUT或者POST来修改数据，而数据经常会放置在JSON格式的请求体(Request body)中，例如：
 
 ```
 User user = new User();
@@ -203,7 +203,7 @@ new Request(POST, "http://..")
 
 ## 动态选项
 
-有时，有些选项是无法直接指定值，因为它们依赖于其他选项的值，例如某些API调用时候的`sign`等选项，它的值以来与所有其他选项的名称或值，在Roboq中可以使用动态选项的功能进行处理。动态选项需要继承自`Request.Modifier`类，使用方法如下：
+有时，有些选项是无法直接指定值，因为它们依赖于其他选项的值，例如某些API调用时候的`sign`等选项，它的值以来与所有其他选项的名称或值，在Roboq中可以使用动态选项的功能进行处理。动态选项需要继承自`Request.Modifier`类，例如：
 
 ```
 new Request(GET, "http://api.yourhost.com/call/api/name")
@@ -341,7 +341,7 @@ User user = resp.as(User.responseMapper);
 
 **注意**
 
-对于`Response.asText()`等方法，执行过一次后，第二次则会抛出异常，因为content数据已经被读取完毕
+对于`Response.asText()`等方法，执行过一次后，第二次则会抛出异常，因为content数据已经被读取完毕。
 
 ```
 String text = resp.asText(); // OK
@@ -371,7 +371,7 @@ new Request(prepared, GET, "/v1/users/${id}") // 使用预备状态
 * URL：会将`Request.Prepared`中的URL与`Request`中的URL进行字符串连接，例如`Request.Prepared`的URL为`http://api.yourhost.com`，而`Request`的URL为`/api/name`，则最终合并为`http://api.yourhost.com/api/name`
 * Options： 包括HTTP头，HTTP参数，HTTP表单字段，URL的PathVar，都会按照`Request`优先的规则进行合并
 * 设置：包括`paramsEncoding`，`connectTimout`等，都会按照`Request`优先的规则进行合并
-* 动态选项：`modifier`的合并规则为，先调用`Request.Prepared`中的`modifier`，然后把修改后的值再调用`Request`中的`modifier`。
+* 动态选项：`modifier`的合并规则为，先调用`Request.Prepared`中的`modifier`，然后把修改后的值再调用`Request`中的`modifier`
 
 
 ## 深度定制
@@ -390,7 +390,7 @@ new Request(prepared, GET, "/v1/users/${id}") // 使用预备状态
 
 ## 异步回调与线程池
 
-`Request.Callback`的用法在[执行请求与获取服务器响应](#执行请求与获取服务器响应)已经介绍过，**Roboq**的Callback包含了对Android Handler的支持，方法如下：
+`Request.Callback`的用法在[执行请求与获取服务器响应](#执行请求与获取服务器响应)已经介绍过，**Roboq**的Callback包含了对Android Handler的支持，例如：
 
 ```
 android.os.Handler handler;
@@ -572,11 +572,11 @@ public class UserActivity extends Activity {
 ## Authors
 
 ```
-[{
+{
 	"name": "高 荣欣",
 	"email": "rongxin.gao@gmail.com",
 	"location": "北京"
-}]
+}
 ```
 欢迎联系 **^_^**
 
