@@ -11,10 +11,10 @@
 * [安装及使用](#安装及使用)
 * [开始](#开始)
 * [创建请求](#创建请求)
-* [HTTP方法](#HTTP方法)
+* [HTTP方法](#http方法)
 * [请求URL](#请求URL)
-* [HTTP参数](#HTTP参数)
-* [HTTP头](#HTTP头)
+* [HTTP参数](#http参数)
+* [HTTP头](#http头)
 * [设置上传数据](#设置上传数据)
 * [提交表单数据与上传文件](#提交表单数据与上传文件)
 * [动态选项](#动态选项)
@@ -25,9 +25,9 @@
 * [深度定制](#深度定制)
 * [异步回调](#异步回调)
 * [例子](#例子)
-* [Authors](#Authors)
-* [License](#License)
-* [Changelog](#Changelog)
+* [Authors](#authors)
+* [License](#license)
+* [Changelog](#changelog)
 
 
 ## 安装及使用
