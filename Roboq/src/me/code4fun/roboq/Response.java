@@ -48,15 +48,11 @@ import java.util.regex.Pattern;
  */
 public class Response {
 
-    protected final HttpResponse httpResponse;
+    public final HttpResponse httpResponse;
     private volatile InputStream content;
 
     public Response(HttpResponse httpResponse) {
         this.httpResponse = httpResponse;
-    }
-
-    public HttpResponse getHttpResponse() {
-        return httpResponse;
     }
 
     public int statusCode() {

@@ -201,12 +201,12 @@ public class RoboqTest extends InstrumentationTestCase {
     }
 
     public void testHTTPS() throws Exception {
-        Response resp = new Request(GET, "https://github.com/gaorx/Roboq")
+        Response resp = new Request(GET, "https://localhost:24444/test_ssl")
                 .execute();
 
         String text = resp.asText();
         assertEquals("testHTTPS", 200, resp.statusCode());
-        assertTrue("testHTTPS", text.length() > 0);
+        assertEquals("testHTTPS", "SSL hello", text);
     }
 
     public void testDownload() throws Exception {
