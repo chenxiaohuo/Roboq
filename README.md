@@ -12,7 +12,7 @@
 * [开始](#开始)
 * [创建请求](#创建请求)
 * [HTTP方法](#http方法)
-* [请求URL](#请求URL)
+* [请求URL](#请求url)
 * [HTTP参数](#http参数)
 * [HTTP头](#http头)
 * [设置上传数据](#设置上传数据)
@@ -21,9 +21,9 @@
 * [设置请求](#设置请求)
 * [执行请求与获取服务器响应](#执行请求与获取服务器响应)
 * [使用服务器响应](#使用服务器响应)
-* [预备选项](#预备选项)
+* [预备状态](#预备状态)
 * [深度定制](#深度定制)
-* [异步回调](#异步回调)
+* [异步回调与线程池](#异步回调与线程池)
 * [例子](#例子)
 * [Authors](#authors)
 * [License](#license)
@@ -344,21 +344,21 @@ String text = resp.asText(); // OK
 String text1 = resp.asText(); // 抛出数据已经读取完成的异常
 ```
 
-## 预备选项
+## 预备状态
 
-在实际的应用中，很多选项是每个HTTP请求都必须附带的，例如HTTP头`User-Agent`和关于身份认证的信息等，如果在每个Request中都设置这些难免有些繁琐，这种情况下，可以使用Roboq的预备选项功能。例如：
+在实际的应用中，很多选项是每个HTTP请求都必须附带的，例如HTTP头`User-Agent`和关于身份认证的信息等，如果在每个Request中都设置这些难免有些繁琐，这种情况下，可以使用Roboq的预备状态功能。例如：
 
 ```
-// 定义预备选项
+// 定义预备状态
 Request.Prepared prepared = new Request.Prepared("http://api.yourhost.com")
 	.with("User-Agent:", "Android client");
 	
-new Request(prepared, GET, "/v1/users/${id}") // 使用预备选项
+new Request(prepared, GET, "/v1/users/${id}") // 使用预备状态
 	.with("id@", "10001")
 	.execute(..);
 ```
 
-在定义好预备选项后，作为第一个参数送入`Request`的构造函数中，这样创建的`Request`实例就共享这个预备选项。`Request.Prepared`中定义了大部分`Request`中所能设置的状态，例如请求URL与各种选项，在`Request`进行对服务器请求时，会将自身的各种状态与预备选项中的装备进行**合并**，所以会在预备选项中放置一些所有请求都需要的选项和设置。
+在定义好预备状态后，作为第一个参数送入`Request`的构造函数中，这样创建的`Request`实例就共享这个预备状态。`Request.Prepared`中定义了大部分`Request`中所能设置的状态，例如请求URL与各种选项，在`Request`进行对服务器请求时，会将自身的各种状态与预备状态中的装备进行**合并**，所以会在预备状态中放置一些所有请求都需要的选项和设置。
 
 **备注** 如果`Request`与`Request.Prepared`中都设置了相同的选项，那么`Request`的设置会覆盖掉`Request.Prepared`的设置，这个规则叫做**`Reqeust`优先规则**。
 
@@ -384,14 +384,185 @@ new Request(prepared, GET, "/v1/users/${id}") // 使用预备选项
 * `InputStream decorateContent(InputStream content)`可以对读取content做装饰，用来完成显示下载进度等功能
 
 
-## 异步回调
+## 异步回调与线程池
 
-`Request.Callback`的用法在
+`Request.Callback`的用法在[执行请求与获取服务器响应](#执行请求与获取服务器响应)已经介绍过，**Roboq**的Callback包含了对Android Handler的支持，方法如下：
+
+```
+android.os.Handler handler;
+
+// 在回调中发送给handler一个消息
+new Request(GET, "http://..").execute(
+                SimpleExecutor.instance,
+                new SendMessageCallback(handler) {
+                    @Override
+                    protected Message createMessage(Request req, Response resp, Exception error) {
+                        return handler.obtainMessage(MSGID, resp.statusCode(), 0, resp.asText());
+                    }
+                });
+                
+                
+// 在回调中发送给handler一个Runnable实例
+new Request(GET, "http://api.yourhost.com/users/${id}", "id$", "10001")
+                .execute(SimpleExecutor.instance,
+                new PostRunnableCallback(handler) {
+                    @Override
+                    protected Runnable createRunnable(Request req, Response resp, Exception error) {
+                        final JSONObject userObj = resp.asJsonObject();
+                        return new Runnable() {
+                            @Override
+                            public void run() {
+                                displayUser(userObj);    
+                            }
+                        };
+                    }
+                });
+
+```
+
+另外值得说明的是`SimpleExecutor.instance`返回一个简单的自由线程实现的Executor，一般情况下，它是不够用的；正确的方式是在全局级别（例如全局单例或定制的Application）中包含一个Executor的线程池实现，用于处理所有的异步调用请求，例如使用`java.util.concurrent.Executors`中可以使用的各种线程池，在这种情况下使用`Request.Prepared.setExecutor(Executor ex)`来设置预备状态中的线程池，然后创建`Request`中使用这个预备状态，并且使用不含有`Executor`参数版本的`Request.execute(Request.Callback cb)`就可以了。
+
+```
+Request.Prepared prepared = new Request.Prepared("http://api.yourhost.com")
+	.setExecutor(Executors.newFixedThreadPool(4));
+
+new Request(GET, "/call/api/name").execute(new PostRunnableCallback() 		@Override
+   		protected Runnable createRunnable(Request req, Response resp, Exception error) {
+                        // ..
+      }
+});
+```
 
 
 ## 例子
 
-TODO
+将`Request.Prepared`实例放置与全局范围内。
+
+```
+// 定制App
+import static me.code4fun.roboq.Request.*;
+
+public class MyApp extends Application {
+    Prepared prepared = new Prepared("http://api.yourhost.com")
+            .setExecutor(Executors.newFixedThreadPool(4))
+            .with("User-Agent:", "Android client")
+            .with("X-Ticket:", "Your ticket")
+            .setModifier(new Modifier() {
+                @Override
+                public Options modifyOptions(Options options) {
+                    Set<String> paramsKeys = options.getParams().keySet();
+                    String sign = calcSign(paramsKeys);
+                    return options.add("sign=", sign);
+                }
+            });
+    
+    public MyApplication() {
+    }
+
+    Prepared getPreparedRequest() {
+        return prepared;
+    }
+}
+
+```
+
+可以定制Callback用于统一错误处理，其实也可以将正确的返回发送至全局事件总线上。
+
+```
+// Callback中包含统一错误处理
+public abstract class DataCallback extends PostRunnableCallback {
+        DataCallback(Handler handler) {
+            super(handler);
+        }
+
+        protected Runnable processError(Request req, Response resp, Exception error) {
+            return ...;
+        }
+
+        @Override
+        protected Runnable createRunnable(Request req, Response resp, Exception error) {
+            if (error != null) {
+                return processError(req, resp, error);
+            } else {
+                if (resp.statusCode() != 200) {
+                    return processError(req, resp, error);
+                } else {
+                    JSONObject jo = resp.asJsonObject();
+                    if (jo.optInt("code") != 0) {
+                        return processError(req, resp, error);
+                    } else {
+                        return createRunnable(jo.optJSONObject("data"));
+                    }
+                }
+            }
+        }
+
+        protected abstract Runnable createRunnable(JSONObject data);
+    }
+
+```
+
+在Activity中，可以方便的调用服务器的HTTP API。
+
+```
+// Activity
+
+import static me.code4fun.roboq.Request.*;
+
+public class UserActivity extends Activity {
+    Handler handler = ..;
+    Prepared prepared = getFromMyApp();
+    
+    public void showUser(String userId) {
+        new Request(prepared, GET, "/users/${id}")
+                .with("id$", userId)
+                .execute(new DataCallback(handler) {
+                    @Override
+                    protected Runnable createRunnable(JSONObject user) {
+                        return new Runnable() {
+                            @Override
+                            public void run() {
+                                // ..
+                            }
+                        };
+                    }
+                });
+    }
+
+    public void createUser(JSONObject user) {
+        new Request(prepared, POST, "/users", "@", user)
+                .execute(new DataCallback(handler) {
+                    @Override
+                    protected Runnable createRunnable(JSONObject data) {
+                        return new Runnable() {
+                            @Override
+                            public void run() {
+                                // ..
+                            }
+                        };
+                    }
+                });
+    }
+
+    public void uploadUserAvatar(String userId, File avatarFile) {
+        new Request(prepared, POST, "/users/${id}/upload_avatar")
+                .with("id$", userId)
+                .with("file@", avatarFile)
+                .execute(new DataCallback(handler) {
+                    @Override
+                    protected Runnable createRunnable(JSONObject data) {
+                        return new Runnable() {
+                            @Override
+                            public void run() {
+                                // ..
+                            }
+                        };
+                    }
+                });
+    }
+}
+
+```
 
 
 ## Authors
@@ -413,7 +584,7 @@ TODO
 
 ## Changelog
 
-TODO
+为0.1奋斗中..
 
 
 
