@@ -9,25 +9,25 @@
 **目录**
 
 * [安装及使用](#安装及使用)
-* [开始！](#开始！)
+* [开始](#开始)
 * [创建请求](#创建请求)
-* HTTP方法
-* 请求URL
-* HTTP参数
-* HTTP头
-* 设置上传数据
-* 提交表单数据与上传文件
-* 动态选项
-* 设置请求
-* 执行请求与获取服务器响应
-* 使用服务器响应
-* 预备选项
-* 深度定制
-* 异步回调
-* 一个例子
-* Authors
-* License
-* Changelog
+* [HTTP方法](#HTTP方法)
+* [请求URL](#请求URL)
+* [HTTP参数](#HTTP参数)
+* [HTTP头](#HTTP头)
+* [设置上传数据](#设置上传数据)
+* [提交表单数据与上传文件](#提交表单数据与上传文件)
+* [动态选项](#动态选项)
+* [设置请求](#设置请求)
+* [执行请求与获取服务器响应](#执行请求与获取服务器响应)
+* [使用服务器响应](#使用服务器响应)
+* [预备选项](#预备选项)
+* [深度定制](#深度定制)
+* [异步回调](#异步回调)
+* [例子](#例子)
+* [Authors](#Authors)
+* [License](#License)
+* [Changelog](#Changelog)
 
 
 ## 安装及使用
@@ -41,7 +41,7 @@ git clone https://github.com/gaorx/Roboq.git
 然后将Roboq/Roboq/src中的源代码复制进你的Android进行编译即可。
 
 
-## 开始！
+## 开始
 
 ```
 import me.code4fun.roboq.*;
@@ -389,7 +389,7 @@ new Request(prepared, GET, "/v1/users/${id}") // 使用预备选项
 `Request.Callback`的用法在
 
 
-## 一个例子
+## 例子
 
 TODO
 
@@ -397,11 +397,11 @@ TODO
 ## Authors
 
 ```
-{
+[{
 	"name": "高 荣欣",
 	"email": "rongxin.gao@gmail.com",
 	"location": "北京"
-}
+}]
 ```
 欢迎联系 **^_^**
 
