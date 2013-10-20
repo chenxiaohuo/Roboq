@@ -1,10 +1,8 @@
 # Roboq: 简单易用的Android HTTP 客户端工具包!
 
------
-
 **Roboq**是一个为**Android**定制的HTTP Client客户端工具包，目的是为Android调用服务器端HTTP API或者REST API提供帮助，也含有简单上传和下载文件功能。
 
-> **Roboq**内部使用Android中含有的Apache HTTPClient工具包，同时也附加上了org.apache.httpcomponents-httpmime-4.2中上传文件的功能。Roboq需要
+> **Roboq**内部使用Android中含有的Apache HTTPClient工具包，同时也附加上了org.apache.httpcomponents-httpmime-4.2中上传文件的功能。Roboq需要Android 2.2+
 
 -----
 
