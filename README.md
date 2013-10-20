@@ -42,7 +42,7 @@
 git clone https://github.com/gaorx/Roboq.git
 ```
 安装:
-然后将Roboq/Roboq/src中的源代码复制进你的Android进行编译即可。
+然后将Roboq/Roboq/src中的源代码复制进你的Android项目进行编译即可。
 
 
 ## 开始
