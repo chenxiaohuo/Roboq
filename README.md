@@ -1,16 +1,16 @@
 # Roboq: 简单易用的Android HTTP 客户端工具包!
 
-**Roboq**是一个为**Android**定制的HTTP Client客户端工具包，目的是为Android调用服务器端HTTP API或者REST API提供帮助，也含有简单上传和下载文件功能。
+**Roboq**是一个为**Android**定制的HTTP Client客户端工具包，目的是为Android调用服务器端HTTP API(包含REST API)提供帮助，也含有简单上传和下载文件功能。
 
-> **Roboq**内部使用Android中含有的Apache HTTPClient工具包，同时也附加上了org.apache.httpcomponents-httpmime-4.2中上传文件的功能。Roboq需要Android 2.2+
+<sub>**Roboq**内部使用Android中含有的Apache HTTPClient工具包，同时也附加上了org.apache.httpcomponents-httpmime-4.2中上传文件的功能。Roboq需要Android 2.2+</sub>
 
 -----
 
 **目录**
 
-* 安装及使用
-* 开始！
-* 创建请求
+* [安装及使用](#安装及使用)
+* [开始！](#开始！)
+* [创建请求](#创建请求)
 * HTTP方法
 * 请求URL
 * HTTP参数
@@ -23,7 +23,7 @@
 * 使用服务器响应
 * 预备选项
 * 深度定制
-* 回调与Android Handler
+* 异步回调
 * 一个例子
 * Authors
 * License
@@ -384,9 +384,9 @@ new Request(prepared, GET, "/v1/users/${id}") // 使用预备选项
 * `InputStream decorateContent(InputStream content)`可以对读取content做装饰，用来完成显示下载进度等功能
 
 
-## 回调与Android Handler
+## 异步回调
 
-TODO
+`Request.Callback`的用法在
 
 
 ## 一个例子
